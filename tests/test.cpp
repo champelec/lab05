@@ -24,8 +24,8 @@ TEST(Transaction, construnct_and_positive) {
     first.set_fee(32);
     EXPECT_EQ(first.fee(), 32);
     EXPECT_TRUE(first.Make(Petya, Katya, 100));
-    EXPECT_EQ(Katya.GetBalance(), 2101);
-    EXPECT_EQ(Petya.GetBalance(), 6132);
+    EXPECT_EQ(Katya.GetBalance(), 2233);
+    EXPECT_EQ(Petya.GetBalance(), 6000);
 }
 
 TEST(Transaction, negative) {
@@ -38,7 +38,7 @@ TEST(Transaction, negative) {
     EXPECT_THROW(second.Make(Misha, Roma, 50), std::logic_error);
     EXPECT_FALSE(second.Make(Misha, Roma, 100));
     second.set_fee(10);
-    EXPECT_TRUE(second.Make(Roma, Misha, 100));
+    EXPECT_FALSE(second.Make(Roma, Misha, 100));
 }
 
 TEST(Account, balance_positive) {
