@@ -1,0 +1,50 @@
+name: Run tests
+
+on:
+  push:
+    branches:
+      [ master ]
+  pull_request:
+    branches:
+      [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential lcov cmake
+
+      - name: Download googletest 1.8.1
+        run: |
+          rm -rf third-party/gtest
+          git clone --branch release-1.8.1 --depth 1 https://github.com/google/googletest.git third-party/gtest
+
+      - name: Configure CMake with coverage
+        run: cmake -S . -B build -DBUILD_TESTS=ON -DCODE_COVERAGE=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Run tests
+        run: cd build && ctest --output-on-failure
+
+      - name: Capture coverage info
+        run: |
+          lcov --directory build --capture --output-file coverage.info --ignore-errors mismatch
+          lcov --remove coverage.info '/usr/*' '*/third-party/*' --output-file coverage.info
+          lcov --list coverage.info
+
+      - name: Upload coverage to Coveralls
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: coverage.info
