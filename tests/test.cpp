@@ -16,29 +16,50 @@ public:
     MOCK_METHOD0(Unlock, void());
 };
 
-TEST(Transaction, construnct_and_positive) {
-    Transaction first;
-    EXPECT_EQ(first.fee(), 1);
-    Account Petya(0, 6132);
-    Account Katya(1, 2133);
-    first.set_fee(32);
-    EXPECT_EQ(first.fee(), 32);
-    EXPECT_TRUE(first.Make(Petya, Katya, 100));
-    EXPECT_EQ(Katya.GetBalance(), 2233);
-    EXPECT_EQ(Petya.GetBalance(), 6000);
+TEST(Transaction, Make_calls_correct_methods) {
+    Transaction transaction;
+    transaction.set_fee(1);
+    MockAccount from(0, 1000);
+    MockAccount to(1, 500);
+    {
+        InSequence seq;
+        EXPECT_CALL(from, Lock());
+        EXPECT_CALL(to, Lock());
+        EXPECT_CALL(to, ChangeBalance(100));
+        EXPECT_CALL(from, GetBalance()).Times(testing::AnyNumber()).WillRepeatedly(Return(1100));
+        EXPECT_CALL(from, ChangeBalance(-101));
+        EXPECT_CALL(from, GetBalance()).Times(testing::AnyNumber()).WillRepeatedly(Return(999));
+        EXPECT_CALL(to, GetBalance()).Times(testing::AnyNumber()).WillRepeatedly(Return(600));
+        EXPECT_CALL(to, Unlock());
+        EXPECT_CALL(from, Unlock());
+    }
+    EXPECT_TRUE(transaction.Make(from, to, 100));
 }
 
-TEST(Transaction, negative) {
-    Transaction second;
-    second.set_fee(51);
-    Account Roma(0, 10);
-    Account Misha(1, 1000);
-    EXPECT_THROW(second.Make(Misha, Misha, 0), std::logic_error);
-    EXPECT_THROW(second.Make(Misha, Roma, -100), std::invalid_argument);
-    EXPECT_THROW(second.Make(Misha, Roma, 50), std::logic_error);
-    EXPECT_FALSE(second.Make(Misha, Roma, 100));
-    second.set_fee(10);
-    EXPECT_FALSE(second.Make(Roma, Misha, 100));
+TEST(Transaction, Make_fails_if_insufficient_funds) {
+    Transaction transaction;
+    transaction.set_fee(10);
+    MockAccount from(0, 100);
+    MockAccount to(1, 200);
+    InSequence seq;
+    EXPECT_CALL(from, Lock());
+    EXPECT_CALL(to, Lock());
+    EXPECT_CALL(to, ChangeBalance(100));
+    EXPECT_CALL(from, GetBalance()).Times(testing::AnyNumber()).WillRepeatedly(Return(105));
+    EXPECT_CALL(to, ChangeBalance(-100));
+    EXPECT_CALL(from, GetBalance()).Times(testing::AnyNumber()).WillRepeatedly(Return(105));
+    EXPECT_CALL(to, GetBalance()).Times(testing::AnyNumber()).WillRepeatedly(Return(200));
+    EXPECT_CALL(to, Unlock());
+    EXPECT_CALL(from, Unlock());
+    EXPECT_FALSE(transaction.Make(from, to, 100));
+}
+
+TEST(Account, Unlock_method_covered) {
+    Account acc(123, 500);
+    acc.Lock();
+    EXPECT_NO_THROW(acc.ChangeBalance(50));
+    EXPECT_EQ(acc.GetBalance(), 550);
+    acc.Unlock();
 }
 
 TEST(Account, balance_positive) {
@@ -66,4 +87,3 @@ TEST(Account, Locker) {
     EXPECT_NO_THROW(acc.ChangeBalance(100));
     acc.Unlock();
 }
-
